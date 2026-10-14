@@ -624,9 +624,15 @@ To be folded back into the MIP texts:
    compromised device survives the very revocation intended to evict it. **§8
    should require that an epoch bump clear the device set**, or that entries
    be stored stamped with the epoch the contract observed at enrolment rather
-   than one carried in a preimage it cannot inspect. Latent here (no circuit
-   bumps the epoch yet) and recorded so the recovery-paths MIP inherits the
-   constraint rather than rediscovering it.
+   than one carried in a preimage it cannot inspect. The reference now calls
+   `devices.resetToDefault()` during finalisation, before inserting the
+   authorised successor. This also removes entries added while recovery was
+   pending. The recovery simulator checks that the actual set contains only
+   that successor, independently of `device_count`. Older deployments retain
+   their installed verifier: adopting this correction requires a verifier
+   update where maintenance remains available, or migration to a corrected
+   deployment where it has been retired. Individual device removal remains
+   a separate issue (erratum 8).
 8. **MIP-0013 §6 removal removes an entry, not a device, so revocation does
    not revoke.** The device set holds single-use entries and carries no
    per-device identity, so nothing constrains a device to exactly one live

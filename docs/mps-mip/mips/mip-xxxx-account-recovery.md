@@ -596,8 +596,14 @@ nonce and the round counter (d).
    window and the pending record itself: the authorisation was
    verified at submission, and the pending record fixes everything
    finalisation does, so a permissionless finalising call can enact
-   only what the submitting party already proved. The epoch bump
-   invalidates every previously enrolled device in a single step.
+   only what the submitting party already proved. Finalisation MUST invalidate
+   every previously enrolled device entry, including entries added while
+   recovery was pending. An implementation accepting opaque device entries
+   MUST clear the device set atomically before inserting the authorised
+   successor, or enforce an equivalent contract-assigned registration-epoch
+   check. Advancing an epoch embedded in an unchecked entry preimage is
+   insufficient: an entry may have been computed for a future epoch. The
+   epoch bump remains necessary to invalidate outstanding grants.
 7. The wallet MUST retain `vk` (recovered at step 3) in the successor
    device's private state, and SHOULD run a fresh session promptly
    after finalisation. Until it does, the account has no recovery
