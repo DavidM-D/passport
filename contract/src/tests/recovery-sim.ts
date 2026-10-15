@@ -408,12 +408,16 @@ await runScenario('recovery-sim', async () => {
     sim.advanceTime(Number(WINDOW) + 60);
     const nonceBeforeFinalise = sim.ledger().auth_nonce;
     const roundBeforeFinalise = sim.ledger().round;
+    const successorEntry = sim.ledger().pending_entry;
+    assert(sim.ledger().devices.size() > 0n, 'recovery starts with a nonempty device set');
     await sim.call('recover_finalise');
     l = sim.ledger();
     assert(l.device_epoch === epochBefore + 1n, 'finalisation bumps the device epoch');
     assert(l.auth_nonce === nonceBeforeFinalise + 1n, 'finalisation advances the authorisation nonce (MIP-0013 §8 d)');
     assert(l.round === roundBeforeFinalise + 1n, 'finalisation advances the round counter');
     assert(l.device_count === 1n, 'exactly one device at the new epoch (MIP-0013 §8c)');
+    assert(l.devices.size() === 1n, 'finalisation replaces the whole device set (AUTH-6)');
+    assert(l.devices.member(successorEntry), 'the sole retained entry is the authorised successor');
     assert(l.pending_recovery === false, 'pending record cleared');
     assert(l.recovery_phi_len === 0n, 'the published vector is retired with its secret');
     assert(eqPoint(l.recovery_pk, successorRecoveryPk), 'the recovery key rotated to the successor');

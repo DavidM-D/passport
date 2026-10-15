@@ -212,11 +212,11 @@ export ledger devices: Set<Bytes<32>>;
 // revocation (README erratum 8, and the note above add_device).
 
 export ledger device_epoch: Uint<32>;
-// Bumped only by the future recovery seam (MIP-0013 §8). Entries hashed
+// Bumped only by recovery finalisation (MIP-0013 §8). Entries hashed
 // under an OLDER epoch can never match an in-circuit recomputation, so they
 // are inert (AUTH-6). Entries hashed under a FUTURE one are not: nothing
-// binds the epoch at enrolment, so a bump alone does not revoke and the
-// seam that owns it must clear the set (README erratum 7).
+// binds the epoch at enrolment, so a bump alone does not revoke.
+// Finalisation also clears the set (README erratum 7).
 
 export ledger device_count: Uint<8>;
 // Devices active in the current epoch, across all arms. Guards the
@@ -1291,9 +1291,9 @@ export circuit rotate_enc_key_with_k256(
 // is the only thing that will ever bump device_epoch. AUTH-6 exists so that a
 // bump revokes a compromised device set WITHOUT enumerating it, and a
 // pre-planted future-epoch entry defeats exactly that: the device being
-// evicted survives its own eviction. **A recovery seam added here MUST clear
-// the device set as part of the bump rather than rely on entries going
-// stale** (equivalently, entries must be stored stamped with the epoch the
+// evicted survives its own eviction. Recovery finalisation therefore clears
+// the device set as part of the bump rather than relying on entries going
+// stale (equivalently, entries could be stored stamped with the epoch the
 // CONTRACT observed at enrolment, rather than one carried in a preimage the
 // contract cannot inspect). See README erratum 7.
 //
@@ -2891,8 +2891,8 @@ export circuit recover_cancel_with_k256(
 }
 
 // Finalisation (recovery MIP §6 step 6; MIP-0013 §8 (b) (c) (d)).
-// Permissionless once the window has closed: the epoch bump retires every
-// pre-recovery entry, the successor's precomputed entry is the sole live
+// Permissionless once the window has closed: clearing the set retires every
+// existing entry, the successor's precomputed entry is the sole live
 // device, the successor recovery key replaces the consumed one, and the
 // published vector is invalidated (the secret it protected is spent).
 // auth_nonce advances so any authorisation cached against the old state is
@@ -2907,6 +2907,10 @@ export circuit recover_finalise(): [] {
   // stores a JubJub point, without operating on one, gets no curve gadget).
   require_live_jubjub_point(pending_recovery_pk);
   device_epoch = ((device_epoch + (1 as Uint<32>)) as Uint<32>);
+  // Enrolment accepts opaque entries whose embedded epoch is not checked.
+  // Clear every prior entry atomically, including those added while recovery
+  // was pending, before installing the sole authorised successor (AUTH-6).
+  devices.resetToDefault();
   devices.insert(pending_entry);
   device_count = 1 as Uint<8>;
   recovery_pk = pending_recovery_pk;
